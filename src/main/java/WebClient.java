@@ -1,14 +1,17 @@
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WebClient {
-
-    private String dirActual;
-    private String FileName;
+    ExecutorService pool;
+    ArrayList<String> urlsDescargados = new ArrayList<>();
+    String dirActual;
 
     class Manejador implements Runnable{
         String url;
@@ -18,6 +21,19 @@ public class WebClient {
 
         @Override
         public void run() {
+
+            if(urlsDescargados.contains(url)){
+                System.out.println("El url ya fue descargado");
+                return;
+            }
+
+            System.out.println("Iniciando la descarga");
+
+            synchronized (urlsDescargados){
+                System.out.println("Accediendo al bloque syncro");
+                urlsDescargados.add(url);
+            }
+
             try {
                 URL obj = new URL(url);
                 HttpURLConnection conex = (HttpURLConnection) obj.openConnection();
@@ -30,15 +46,15 @@ public class WebClient {
                 System.out.println("Content type :: " + contentType);
 
                 if(responseCode == HttpURLConnection.HTTP_OK) { // success
+                    creaArchivo(url, conex);
+
                     if(contentType.startsWith("text/html")){
                         System.out.println("Es un html, hacer analisis de links :'c");
-                        //buscar link
-                        //new Manejador(url);
+                        leerArch();
 
                     }
-                    else{
-                        creaArchivo(url, conex);
-                    }
+                    conex.disconnect();
+                    System.out.println("Hilo terminando");
                 } else {
                     System.out.println("GET request not worked");
                 }
@@ -48,12 +64,15 @@ public class WebClient {
         }
 
         public void creaArchivo(String url, HttpURLConnection conex) throws IOException{
-            FileName= url.substring(url.lastIndexOf("/")+1);
-            System.out.println("FileName "+FileName);
+            String fileName = url.substring(url.lastIndexOf("/") + 1);
+            if(fileName.equals("")){
+                fileName="index.html";
+            }
+            System.out.println("FileName "+ fileName);
 
             File f = new File("");
-            dirActual = f.getAbsolutePath()+"\\Descargas"+"\\";
-            BufferedOutputStream bos= new BufferedOutputStream(new FileOutputStream(dirActual+FileName));
+            dirActual = f.getAbsolutePath() + "\\Descargas" + "\\";
+            BufferedOutputStream bos= new BufferedOutputStream(new FileOutputStream(dirActual + fileName));
 
             InputStream inputStream = conex.getInputStream();
             byte[] buffer = new byte[1024];
@@ -99,29 +118,20 @@ public class WebClient {
 
 
     public WebClient() {
-        ExecutorService pool = Executors.newFixedThreadPool(3);
-        while (true){
+
+        pool = Executors.newFixedThreadPool(3);
+
+        //while (true){
             String url;
             System.out.println("Inserte la URL que desea descargar: \n>");
             Scanner aux= new Scanner(System.in);
             url=aux.nextLine();
-            //wbcl.sendGET(url);
-            //new Manejador(url);
-            pool.execute(new Manejador(url));
-        }
 
+            pool.execute(new Manejador(url));
+        //}
     }
 
-    public static void main(String[] args) throws IOException {
-
-        WebClient wbcl = new WebClient();
-
-/*        while (true){
-            String url;
-            System.out.println("Inserte la URL que desea descargar: \n>");
-            Scanner aux= new Scanner(System.in);
-            url=aux.nextLine();
-            wbcl.sendGET(url);
-        }*/
+    public static void main(String[] args) {
+        new WebClient();
     }
 }
