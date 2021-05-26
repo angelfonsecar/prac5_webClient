@@ -10,13 +10,16 @@ import java.util.regex.Pattern;
 
 public class WebClient {
     ExecutorService pool;
-    ArrayList<String> urlsDescargados = new ArrayList<>();
-    String dirActual;
+    final ArrayList<String> urlsDescargados = new ArrayList<>();
+
 
     class Manejador implements Runnable{
+        String dirActual;
         String url;
-        public Manejador(String url) {
+
+        public Manejador(String url, String dirActual) {
             this.url = url;
+            this.dirActual = dirActual;
         }
 
         @Override
@@ -30,7 +33,6 @@ public class WebClient {
             System.out.println("Iniciando la descarga");
 
             synchronized (urlsDescargados){
-                System.out.println("Accediendo al bloque syncro");
                 urlsDescargados.add(url);
             }
 
@@ -42,16 +44,21 @@ public class WebClient {
                 int responseCode = conex.getResponseCode();
                 System.out.println("GET Response Code :: " + responseCode);
 
-                String contentType = conex.getContentType();
-                System.out.println("Content type :: " + contentType);
-
                 if(responseCode == HttpURLConnection.HTTP_OK) { // success
-                    creaArchivo(url, conex);
+                    String contentType = conex.getContentType();
+                    System.out.println("Content type :: " + contentType);
 
-                    if(contentType.startsWith("text/html")){
-                        System.out.println("Es un html, hacer analisis de links :'c");
+                    if(contentType!=null && contentType.startsWith("text/html")){
+                        String[] split =url.split("/");
+                        File f = new File(dirActual+split[split.length-1]);
+                        //crear carpeta con nombre url, en dirActual
+                        f.mkdirs();
+                        //modificar dir
+                        dirActual=f.getAbsolutePath()+"\\";
+                        creaArchivo(conex);
                         leerArch();
-
+                    }else{
+                        creaArchivo(conex);
                     }
                     conex.disconnect();
                     System.out.println("Hilo terminando");
@@ -83,7 +90,6 @@ public class WebClient {
                 bos.write ( buffer, 0, bufferLength );
                 downloadedSize += bufferLength;
             }
-            System.out.println("Archivo recibido");
             bos.close();
         }
 
@@ -119,15 +125,17 @@ public class WebClient {
 
     public WebClient() {
 
-        pool = Executors.newFixedThreadPool(3);
+        pool = Executors.newFixedThreadPool(30);
 
         //while (true){
-            String url;
+        String url;
             System.out.println("Inserte la URL que desea descargar: \n>");
             Scanner aux= new Scanner(System.in);
             url=aux.nextLine();
 
-            pool.execute(new Manejador(url));
+            File f = new File("");
+
+            pool.execute(new Manejador(url, f.getAbsolutePath() + "\\Descargas" + "\\"));
         //}
     }
 
