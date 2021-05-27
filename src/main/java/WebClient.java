@@ -75,15 +75,11 @@ public class WebClient {
             System.out.println("Hilo terminando");
         }
 
-        public void creaArchivo(String url, HttpURLConnection conex) throws IOException{
+        public String creaArchivo(HttpURLConnection conex) throws IOException{
             String fileName = url.substring(url.lastIndexOf("/") + 1);
             if(fileName.equals("")){
                 fileName="index.html";
             }
-            System.out.println("FileName "+ fileName);
-
-            File f = new File("");
-            dirActual = f.getAbsolutePath() + "\\Descargas" + "\\";
             BufferedOutputStream bos= new BufferedOutputStream(new FileOutputStream(dirActual + fileName));
 
             InputStream inputStream = conex.getInputStream();
@@ -100,35 +96,46 @@ public class WebClient {
             return fileName;
         }
 
-    }
+        public void leerArch(String fileName) {
+            Pattern MY_PATTERN = Pattern.compile("(href|src)=\".+?\"",Pattern.CASE_INSENSITIVE);
 
-/*    private  void sendGET(String url) throws IOException {
-        URL obj = new URL(url);
-        HttpURLConnection conex = (HttpURLConnection) obj.openConnection();
-        conex.setRequestMethod("GET");
-        conex.setRequestProperty("User-Agent", "Mozilla/5.0");
-        int responseCode = conex.getResponseCode();
-        System.out.println("GET Response Code :: " + responseCode);
+            try {
+                FileReader fr = new FileReader(dirActual + fileName);//Nuevadir
+                BufferedReader br = new BufferedReader(fr);
+                String linea = br.readLine();
+                StringBuilder htmlContent= new StringBuilder();
+                while (linea != null) {
+                    htmlContent.append(linea);
+                    linea = br.readLine();
+                }
+                Matcher m = MY_PATTERN.matcher(htmlContent);
+                while (m.find()) {
+                    String relativeLink = m.group(0);
+                    relativeLink = relativeLink.substring(relativeLink.indexOf("\"")+1,relativeLink.length()-1);
+                    System.out.println("relative link = " + relativeLink);
+                    if(!relativeLink.startsWith("?")){
 
-        String contentType = conex.getContentType();
-        System.out.println("Content type :: " + contentType);
+                        if(!url.contains(relativeLink)){
+                            if(relativeLink.startsWith("http")){
+                                System.out.println("Descargando: " + relativeLink);
+                                pool.execute(new Manejador(relativeLink,dirActual));
+                            }
+                            else {
+                                System.out.println("Descargando: " + url + relativeLink);
+                                pool.execute(new Manejador(url + relativeLink, dirActual));
+                            }
+                        }
+                    }
 
-        if(responseCode == HttpURLConnection.HTTP_OK) { // success
-            if(contentType.startsWith("text/html")){
-                System.out.println("Es un html, hacer analisis de links :'c");
-                //buscar link
-                //sengGET(nuevo link)
-
+                }
+                br.close();
+                fr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            else{
-                creaArchivo(url, conex);
-            }
-        } else {
-            System.out.println("GET request not worked");
         }
 
-    }*/
-
+    }
 
     public WebClient() {
 
