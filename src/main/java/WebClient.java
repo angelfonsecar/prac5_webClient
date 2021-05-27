@@ -1,3 +1,7 @@
+//saber cuando el programa termina
+//Cambiar links relativos y añadir /index.html
+//htm
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -25,7 +29,7 @@ public class WebClient {
         @Override
         public void run() {
 
-            if(urlsDescargados.contains(url)){
+            if(urlsDescargados.contains(url) || urlsDescargados.size()>900){
                 System.out.println("El url ya fue descargado");
                 return;
             }
@@ -55,19 +59,20 @@ public class WebClient {
                         f.mkdirs();
                         //modificar dir
                         dirActual=f.getAbsolutePath()+"\\";
-                        creaArchivo(conex);
-                        leerArch();
+                        //creaArchivo(conex);
+                        leerArch(creaArchivo(conex));
                     }else{
                         creaArchivo(conex);
                     }
-                    conex.disconnect();
-                    System.out.println("Hilo terminando");
+
                 } else {
                     System.out.println("GET request not worked");
                 }
+                conex.disconnect();
             }catch (Exception e){
                 e.printStackTrace();
             }
+            System.out.println("Hilo terminando");
         }
 
         public void creaArchivo(String url, HttpURLConnection conex) throws IOException{
@@ -83,14 +88,16 @@ public class WebClient {
 
             InputStream inputStream = conex.getInputStream();
             byte[] buffer = new byte[1024];
-            int bufferLength = 0;
+            int bufferLength;
             int downloadedSize = 0;
             while ((bufferLength = inputStream.read ( buffer )) > 0) {
 
                 bos.write ( buffer, 0, bufferLength );
                 downloadedSize += bufferLength;
             }
+            inputStream.close();
             bos.close();
+            return fileName;
         }
 
     }
@@ -125,7 +132,7 @@ public class WebClient {
 
     public WebClient() {
 
-        pool = Executors.newFixedThreadPool(30);
+        pool = Executors.newFixedThreadPool(10);
 
         //while (true){
         String url;
@@ -139,7 +146,5 @@ public class WebClient {
         //}
     }
 
-    public static void main(String[] args) {
-        new WebClient();
-    }
+    public static void main(String[] args) { new WebClient(); }
 }
