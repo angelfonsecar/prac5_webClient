@@ -1,7 +1,3 @@
-//saber cuando el programa termina
-//Cambiar links relativos y añadir /index.html
-//htm
-
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
